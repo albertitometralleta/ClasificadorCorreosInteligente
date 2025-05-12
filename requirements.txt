@@ -8,3 +8,5 @@ xgboost>=2.0.0
 tk>=8.6.0
 langdetect>=1.0.9
 deep-translator>=1.11.0
+matplotlib>=3.7.0
+seaborn>=0.12.0

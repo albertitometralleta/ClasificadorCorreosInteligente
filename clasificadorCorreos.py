@@ -1,71 +1,39 @@
+import utils
+from utils import preprocess_text, extract_features, light_clean, traducir_a_ingles
 import tkinter as tk
 from tkinter import filedialog
 import email
 from email import policy
 import joblib
-import re
-import string
-import nltk
-from nltk.corpus import stopwords
 from bs4 import BeautifulSoup
 from scipy.sparse import hstack
-from langdetect import detect
-from deep_translator import GoogleTranslator
 import os
 import pandas as pd
 import subprocess
 from tkinter import messagebox
 
-# Cargar stopwords
-nltk.download('stopwords')
-stop_words = set(stopwords.words('english'))
 
 # Rutas de los modelos y vectorizadores
-ruta_modelo1 = os.path.join(os.path.dirname(os.path.abspath(__file__)), "modelo1.pkl")
-ruta_modelo2 = os.path.join(os.path.dirname(os.path.abspath(__file__)), "modelo2.pkl")
-ruta_vectorizer = os.path.join(os.path.dirname(os.path.abspath(__file__)), "vectorizer.pkl")
-ruta_vectorizer2 = os.path.join(os.path.dirname(os.path.abspath(__file__)), "vectorizer2.pkl")
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+phishing_path = os.path.join(BASE_DIR, 'datasets', 'CEAS_08.csv')
+spam_path = os.path.join(BASE_DIR, 'datasets', 'combined_data.csv')
+ruta_modelo1 = os.path.join(BASE_DIR, 'modelos', 'model1.pkl')
+ruta_modelo2 = os.path.join(BASE_DIR, 'modelos', 'model2.pkl')
+ruta_vectorizer = os.path.join(BASE_DIR, 'modelos', 'vectorizer.pkl')
+ruta_vectorizer2 = os.path.join(BASE_DIR, 'modelos', 'vectorizer2.pkl')
+ruta_script_actualizar = os.path.join(BASE_DIR, 'actualizarModelos.py')
 
-phishing_keywords = [
-    "account", "password", "verify", "login", "update", "security",
-    "credentials", "unauthorized", "suspended", "compromised", "alert", "reset",
-    "urgent", "immediately", "action required", "important", "now",
-    "verify immediately", "failure", "final warning", "attention", "limited time",
-    "response needed", "winner", "congratulations", "free", "bonus", "refund",
-    "claim", "reward", "lottery", "prize", "gift card", "cash", "click here",
-    "download", "open attachment", "access", "view", "see details", "login link",
-    "check now", "follow the link", "paypal", "apple", "amazon", "bank",
-    "netflix", "support", "help desk", "it department", "administrator", "system", "cnn"
-]
 
-def traducir_a_ingles(texto):
-    idioma = detect(texto)
-    return GoogleTranslator(source='auto', target='en').translate(texto) if idioma != 'en' else texto
+# Cargar modelos y vectorizadores una sola vez
+model = joblib.load(ruta_modelo1)
+malicious_model = joblib.load(ruta_modelo2)
+vectorizer = joblib.load(ruta_vectorizer)
+vectorizer2 = joblib.load(ruta_vectorizer2)
 
-def limpiar_html(texto):
-    return re.sub(r'[^a-zA-Z\s]', '', BeautifulSoup(texto, "html.parser").get_text())
 
-def eliminar_stopwords(texto):
-    return " ".join([word for word in texto.split() if word not in stop_words])
+#Variable para actualizar la base de datos
+actualizadoBase = 0
 
-def preprocess_text(text):
-    text = limpiar_html(text).lower()
-    text = re.sub(r"http\S+|\S+@\S+|\d+", "", text)
-    text = text.translate(str.maketrans('', '', string.punctuation)).strip()
-    return eliminar_stopwords(text)
-
-def light_clean(text):
-    return re.sub(r'\s+', ' ', text).strip().lower() if isinstance(text, str) else ''
-
-def extract_features(text):
-    text_lower = text.lower()
-    return {
-        'num_links': len(re.findall(r'http[s]?://|www\\.|bit\\.ly|tinyurl|chk\\.me', text_lower)),
-        'has_form': int(bool(re.search(r'<form|input type=', text_lower))),
-        'has_attachment': int('.zip' in text_lower or '.exe' in text_lower or 'attachment' in text_lower),
-        'text_length': len(text),
-        'num_phishing_keywords': sum(1 for kw in phishing_keywords if kw in text_lower),
-    }
 
 def extract_body(msg):
     def get_charset(part):
@@ -125,11 +93,6 @@ def cargar_archivo_eml():
 def classify_email(text):
     text = traducir_a_ingles(text)
     clean = preprocess_text(text)
-    model = joblib.load(ruta_modelo1)
-    malicious_model = joblib.load(ruta_modelo2)
-    vectorizer = joblib.load(ruta_vectorizer)
-    vectorizer2 = joblib.load(ruta_vectorizer2)
-
     X = vectorizer.transform([clean])
     probabilities = model.predict_proba(X)[0]
     spam_prob = probabilities[1]
@@ -254,6 +217,7 @@ def mostrar_correccion():
     frame_correccion.pack()
 
 def corregir(tipo):
+    global actualizadoBase
     body = text_body.get("1.0", tk.END).strip()
     if tipo == "Ham":
         guardar_correo(body, 0, 'combined_data.csv')
@@ -261,6 +225,8 @@ def corregir(tipo):
         guardar_correo(body, 1, 'combined_data.csv')
     elif tipo == "Phishing":
         guardar_correo(body, 1, 'CEAS_08.csv')
+        
+    actualizadoBase = 1
     frame_correccion.pack_forget()
     resultado_label.config(text=f"Gracias por su colaboración.")
 
@@ -270,11 +236,13 @@ def guardar_correo(body, label, dataset):
 
     if dataset == 'combined_data.csv':
         nuevo_dato = pd.DataFrame({'text': [texto_limpio], 'label': [label]})
+        ruta = spam_path
     elif dataset == 'CEAS_08.csv':
-        nuevo_dato = pd.DataFrame({'text': [texto_limpio], 'label': [1]})
+        nuevo_dato = pd.DataFrame({'body': [texto_limpio], 'label': [1]})
+        ruta = phishing_path
     else:
         return
-    ruta = os.path.join(os.path.dirname(os.path.abspath(__file__)), dataset)
+    
     if os.path.exists(ruta):
         df = pd.read_csv(ruta)
         df = pd.concat([df, nuevo_dato], ignore_index=True)
@@ -283,24 +251,22 @@ def guardar_correo(body, label, dataset):
     df.to_csv(ruta, index=False)
 
 def al_cerrar():
-    # Muestra la ventana emergente de espera
-    popup = tk.Toplevel()
-    popup.title("Actualizando")
-    popup.geometry("300x100")
-    tk.Label(popup, text="Espere un momento, actualizando las bases de datos...").pack(pady=20)
-    popup.update()
+    if actualizadoBase == 1:
+        popup = tk.Toplevel()
+        popup.title("Actualizando")
+        popup.geometry("300x100")
+        tk.Label(popup, text="Espere un momento, actualizando las bases de datos..."+"\n Esto podria durar unos minutos").pack(pady=20)
+        popup.update()
 
-    # Ejecuta el script externo y espera a que termine
-    try:
-        
-        subprocess.run(["python", "actualizarModelos.py"], check=True)
-    except Exception as e:
-        messagebox.showerror("Error", f"Hubo un problema al actualizar:\n{e}")
-    finally:
-        popup.destroy()
-        window.destroy()
+        try:
+            subprocess.run(["python", ruta_script_actualizar], check=True)
+        except Exception as e:
+            messagebox.showerror("Error", f"Hubo un problema al actualizar:\n{e}")
+        finally:
+            popup.destroy()
+    window.destroy()  # Cierra ventana al final siempre
 
-# Asociar la función al evento de cierre de ventana
+# Asocia siempre el protocolo
 window.protocol("WM_DELETE_WINDOW", al_cerrar)
 
 window.mainloop()
