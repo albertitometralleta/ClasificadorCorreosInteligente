@@ -32,4 +32,5 @@ La clasificación se realiza en dos etapas usando modelos de Machine Learning en
 ## Instalación
 1. Clonar repositorio 
 2. Comprobar `Requisitos`
-3. Ejecutar: start.bat
+3. SI ES LA PRIMERA VEZ --> Ejecutar: `configureAndStart.bat`
+	SI NO LO ES         --> Ejecutar: `start.bat`
