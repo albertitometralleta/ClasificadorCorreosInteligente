@@ -5,9 +5,9 @@ Proyecto realizado y presentado para formar parte del concurso **Desafío Tecnol
 ---
 
 Este proyecto es una aplicación de escritorio en Python con interfaz gráfica (Tkinter) que permite **clasificar correos electrónicos** `.eml` en tres categorías:
-- 🟢 **Ham** (legítimos)
-- 🟡 **Spam inofensivo**
-- 🔴 **Phishing**
+- 🟢 **Ham** (mails legítimos)
+- 🟡 **Spam** (publicidad/mails molestos)
+- 🔴 **Phishing** (mails con contenido/intencion maliciosa)
 
 La clasificación se realiza en dos etapas usando modelos de Machine Learning entrenados previamente.
 
@@ -15,8 +15,8 @@ La clasificación se realiza en dos etapas usando modelos de Machine Learning en
 
 ## Características
 - Clasificación automática de correos usando modelos `scikit-learn`.
-- Traducción automática si el correo está en otro idioma.
-- Visualización de resultados en barras gráficas.
+- Traducción automática si el correo está en otro idioma diferente a nuestra BBDD.
+- Visualización de resultados en la interfaz mediante barras gráficas.
 - Detección de patrones phishing basados en palabras clave y características estructurales.
 - Feedback del usuario con opción de corrección y aprendizaje continuo.
 
