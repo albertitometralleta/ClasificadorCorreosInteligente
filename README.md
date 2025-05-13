@@ -14,7 +14,7 @@ La clasificación se realiza en dos etapas usando modelos de Machine Learning en
 ---
 
 ## Características
-- Clasificación automática de correos usando modelos `scikit-learn`.
+- Clasificación automática de correos usando modelos `XGBClassifier`.
 - Traducción automática si el correo está en otro idioma diferente a nuestra BBDD.
 - Visualización de resultados en la interfaz mediante barras gráficas.
 - Detección de patrones phishing basados en palabras clave y características estructurales.
