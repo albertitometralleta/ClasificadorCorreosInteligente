@@ -24,7 +24,7 @@ La clasificación se realiza en dos etapas usando modelos de Machine Learning en
 
 ## Requisitos
 - Windows 10/11
-- Python 3.9 o superior
+- Python 3.12 o superior
 - Requiere conexión a internet para traducción y actualización  (deep-translator y nltk.downloader stopwords)
 
 ---
